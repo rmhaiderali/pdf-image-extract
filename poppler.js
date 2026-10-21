@@ -5,6 +5,19 @@ import child_process from "child_process"
 
 const exec = promisify(child_process.exec)
 
+async function readFileChunk(path, length, start = 0) {
+  const file = await fs.promises.open(path, "r")
+
+  try {
+    const buffer = Buffer.alloc(length)
+    const { bytesRead } = await file.read(buffer, 0, length, start)
+
+    return buffer.subarray(0, bytesRead)
+  } finally {
+    await file.close()
+  }
+}
+
 function isPdfFile(data) {
   const magicNum = Array.from("%PDF-").map((char) => char.charCodeAt(0))
   for (let i = 0; i < magicNum.length; i++)
@@ -33,7 +46,7 @@ for (const pdfFile of fs.readdirSync(pdfsDir)) {
 
   if (!isFile(pdfFilePath)) continue
 
-  const data = new Uint8Array(fs.readFileSync(pdfFilePath))
+  const data = new Uint8Array(await readFileChunk(pdfFilePath, 5))
 
   if (!isPdfFile(data)) continue
 
